@@ -6,16 +6,22 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 type Querier interface {
-	CreateObject(ctx context.Context, id uuid.UUID) (Object, error)
+	CountObjects(ctx context.Context) (int64, error)
+	CountTasks(ctx context.Context, arg CountTasksParams) (int64, error)
+	CreateObject(ctx context.Context, id *uuid.UUID) (Object, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
-	GetObject(ctx context.Context, id uuid.UUID) (Object, error)
+	GetObject(ctx context.Context, id *uuid.UUID) (Object, error)
 	ListObjects(ctx context.Context, arg ListObjectsParams) ([]Object, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
+	UpdateObjectLastSyncedAt(ctx context.Context, arg UpdateObjectLastSyncedAtParams) (Object, error)
+	UpdateTaskProcessing(ctx context.Context, startedAt sql.NullTime) (UpdateTaskProcessingRow, error)
+	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -13,14 +13,14 @@ import (
 )
 
 type Object struct {
-	ID           uuid.UUID    `json:"id"`
+	ID           *uuid.UUID   `json:"id"`
 	CreatedAt    sql.NullTime `json:"created_at"`
 	LastSyncedAt sql.NullTime `json:"last_synced_at"`
 }
 
 type Task struct {
-	ID          uuid.UUID             `json:"id"`
-	ObjectID    uuid.UUID             `json:"object_id"`
+	ID          *uuid.UUID            `json:"id"`
+	ObjectID    *uuid.UUID            `json:"object_id"`
 	Status      string                `json:"status"`
 	Input       json.RawMessage       `json:"input"`
 	Output      pqtype.NullRawMessage `json:"output"`

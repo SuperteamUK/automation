@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -49,9 +50,9 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	qtx := h.queries.WithTx(tx)
 
 	// Check if object exists, create if not
-	_, err = qtx.GetObject(r.Context(), req.ObjectID)
+	_, err = qtx.GetObject(r.Context(), &req.ObjectID)
 	if err == sql.ErrNoRows {
-		_, err = qtx.CreateObject(r.Context(), req.ObjectID)
+		_, err = qtx.CreateObject(r.Context(), &req.ObjectID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -63,7 +64,7 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Create task
 	task, err := qtx.CreateTask(r.Context(), database.CreateTaskParams{
-		ObjectID: req.ObjectID,
+		ObjectID: &req.ObjectID,
 		Input:    req.Input,
 	})
 	if err != nil {
@@ -80,21 +81,20 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
-	var objectID uuid.UUID
+	var objectID *uuid.UUID
 	if idStr := r.URL.Query().Get("object_id"); idStr != "" {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
 			http.Error(w, "invalid object_id", http.StatusBadRequest)
 			return
 		}
-		objectID = id
+		objectID = &id
 	}
 
 	var status string
 	if s := r.URL.Query().Get("status"); s != "" {
 		status = s
 	}
-
 	limit := 10
 	if l := r.URL.Query().Get("limit"); l != "" {
 		parsed, err := strconv.Atoi(l)
@@ -110,17 +110,35 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 			offset = parsed
 		}
 	}
-
-	tasks, err := h.queries.ListTasks(r.Context(), database.ListTasksParams{
-		Column1:  objectID,
-		Column2:  status,
-		Limit:    int32(limit),
-		Offset:   int32(offset),
+	listTaskParams := database.ListTasksParams{
+		Column1: objectID,
+		Column2: status,  // This is the issue - empty string is not NULL
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	}
+	tasks, err := h.queries.ListTasks(r.Context(), listTaskParams)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// build pagination with CountTasks
+	count, err := h.queries.CountTasks(r.Context(), database.CountTasksParams{
+		Column1: objectID,
+		Column2: status,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	json.NewEncoder(w).Encode(tasks)
+	pagination := map[string]interface{}{
+		"total": count,
+		"limit": limit,
+		"offset": offset,
+	}
+	response := map[string]interface{}{
+		"tasks": tasks,
+		"pagination": pagination,
+	}
+	json.NewEncoder(w).Encode(response)
 }

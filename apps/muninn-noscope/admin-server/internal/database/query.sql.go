@@ -7,10 +7,43 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 
 	"github.com/google/uuid"
 )
+
+const countObjects = `-- name: CountObjects :one
+SELECT COUNT(*)
+FROM objects
+`
+
+func (q *Queries) CountObjects(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.countObjectsStmt, countObjects)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countTasks = `-- name: CountTasks :one
+SELECT COUNT(*)
+FROM tasks
+WHERE 
+    ($1::uuid IS NULL OR object_id = $1::uuid) AND
+    ($2::text = '' OR status = $2::text)
+`
+
+type CountTasksParams struct {
+	Column1 *uuid.UUID `json:"column_1"`
+	Column2 string     `json:"column_2"`
+}
+
+func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, error) {
+	row := q.queryRow(ctx, q.countTasksStmt, countTasks, arg.Column1, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const createObject = `-- name: CreateObject :one
 INSERT INTO objects (id)
@@ -18,7 +51,7 @@ VALUES ($1)
 RETURNING id, created_at, last_synced_at
 `
 
-func (q *Queries) CreateObject(ctx context.Context, id uuid.UUID) (Object, error) {
+func (q *Queries) CreateObject(ctx context.Context, id *uuid.UUID) (Object, error) {
 	row := q.queryRow(ctx, q.createObjectStmt, createObject, id)
 	var i Object
 	err := row.Scan(&i.ID, &i.CreatedAt, &i.LastSyncedAt)
@@ -39,7 +72,7 @@ RETURNING id, object_id, status, input, output, error, created_at, started_at, c
 `
 
 type CreateTaskParams struct {
-	ObjectID uuid.UUID       `json:"object_id"`
+	ObjectID *uuid.UUID      `json:"object_id"`
 	Input    json.RawMessage `json:"input"`
 }
 
@@ -65,7 +98,7 @@ SELECT id, created_at, last_synced_at FROM objects
 WHERE id = $1
 `
 
-func (q *Queries) GetObject(ctx context.Context, id uuid.UUID) (Object, error) {
+func (q *Queries) GetObject(ctx context.Context, id *uuid.UUID) (Object, error) {
 	row := q.queryRow(ctx, q.getObjectStmt, getObject, id)
 	var i Object
 	err := row.Scan(&i.ID, &i.CreatedAt, &i.LastSyncedAt)
@@ -75,20 +108,18 @@ func (q *Queries) GetObject(ctx context.Context, id uuid.UUID) (Object, error) {
 const listObjects = `-- name: ListObjects :many
 SELECT id, created_at, last_synced_at
 FROM objects
-WHERE CASE WHEN $1::uuid IS NOT NULL THEN id = $1 ELSE TRUE END
 ORDER BY last_synced_at DESC NULLS LAST
-LIMIT $2
-OFFSET $3
+LIMIT $1
+OFFSET $2
 `
 
 type ListObjectsParams struct {
-	Column1 uuid.UUID `json:"column_1"`
-	Limit   int32     `json:"limit"`
-	Offset  int32     `json:"offset"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 func (q *Queries) ListObjects(ctx context.Context, arg ListObjectsParams) ([]Object, error) {
-	rows, err := q.query(ctx, q.listObjectsStmt, listObjects, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.listObjectsStmt, listObjects, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -114,18 +145,18 @@ const listTasks = `-- name: ListTasks :many
 SELECT id, object_id, status, input, output, error, created_at, started_at, completed_at
 FROM tasks
 WHERE 
-    CASE WHEN $1::uuid IS NOT NULL THEN object_id = $1 ELSE TRUE END AND
-    CASE WHEN $2::text IS NOT NULL THEN status = $2 ELSE TRUE END
+    ($1::uuid IS NULL OR object_id = $1::uuid) AND
+    ($2::text = '' OR status = $2::text)
 ORDER BY created_at DESC
 LIMIT $3
 OFFSET $4
 `
 
 type ListTasksParams struct {
-	Column1 uuid.UUID `json:"column_1"`
-	Column2 string    `json:"column_2"`
-	Limit   int32     `json:"limit"`
-	Offset  int32     `json:"offset"`
+	Column1 *uuid.UUID `json:"column_1"`
+	Column2 string     `json:"column_2"`
+	Limit   int32      `json:"limit"`
+	Offset  int32      `json:"offset"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
@@ -164,4 +195,23 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateObjectLastSyncedAt = `-- name: UpdateObjectLastSyncedAt :one
+UPDATE objects
+SET last_synced_at = $2
+WHERE id = $1
+RETURNING id, created_at, last_synced_at
+`
+
+type UpdateObjectLastSyncedAtParams struct {
+	ID           *uuid.UUID   `json:"id"`
+	LastSyncedAt sql.NullTime `json:"last_synced_at"`
+}
+
+func (q *Queries) UpdateObjectLastSyncedAt(ctx context.Context, arg UpdateObjectLastSyncedAtParams) (Object, error) {
+	row := q.queryRow(ctx, q.updateObjectLastSyncedAtStmt, updateObjectLastSyncedAt, arg.ID, arg.LastSyncedAt)
+	var i Object
+	err := row.Scan(&i.ID, &i.CreatedAt, &i.LastSyncedAt)
+	return i, err
 }

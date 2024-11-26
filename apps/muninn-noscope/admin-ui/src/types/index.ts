@@ -5,15 +5,30 @@ export interface Task {
   input: Record<string, any>;
   output?: Record<string, any>;
   error?: string;
-  created_at: string;
-  started_at?: string;
-  completed_at?: string;
+  created_at: {
+    Time: string;
+    Valid: boolean;
+  };
+  started_at?: {
+    Time: string;
+    Valid: boolean;
+  };
+  completed_at?: {
+    Time: string;
+    Valid: boolean;
+  };
 }
 
 export interface Object {
   id: string;
-  created_at: string;
-  last_synced_at?: string;
+  created_at: {
+    Time: string;
+    Valid: boolean;
+  };
+  last_synced_at?: {
+    Time: string;
+    Valid: boolean;
+  };
 }
 
 export interface ListObjectsRow {
@@ -53,4 +68,15 @@ export interface ObjectDetail {
   types: any[];
   typeValues: ObjectTypeValue[];
   stepsAndFunnels: any[];
+}
+
+export interface WorkerMetrics {
+  tasks_processed: number;
+  tasks_succeeded: number;
+  tasks_failed: number;
+  worker_status: string;
+  last_start_time: string;
+  last_error_time: string;
+  last_error: string;
+  current_tasks: number;
 }

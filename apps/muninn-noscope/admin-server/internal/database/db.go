@@ -24,6 +24,12 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.countObjectsStmt, err = db.PrepareContext(ctx, countObjects); err != nil {
+		return nil, fmt.Errorf("error preparing query CountObjects: %w", err)
+	}
+	if q.countTasksStmt, err = db.PrepareContext(ctx, countTasks); err != nil {
+		return nil, fmt.Errorf("error preparing query CountTasks: %w", err)
+	}
 	if q.createObjectStmt, err = db.PrepareContext(ctx, createObject); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateObject: %w", err)
 	}
@@ -39,11 +45,30 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listTasksStmt, err = db.PrepareContext(ctx, listTasks); err != nil {
 		return nil, fmt.Errorf("error preparing query ListTasks: %w", err)
 	}
+	if q.updateObjectLastSyncedAtStmt, err = db.PrepareContext(ctx, updateObjectLastSyncedAt); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateObjectLastSyncedAt: %w", err)
+	}
+	if q.updateTaskProcessingStmt, err = db.PrepareContext(ctx, updateTaskProcessing); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTaskProcessing: %w", err)
+	}
+	if q.updateTaskStatusStmt, err = db.PrepareContext(ctx, updateTaskStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTaskStatus: %w", err)
+	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
+	if q.countObjectsStmt != nil {
+		if cerr := q.countObjectsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countObjectsStmt: %w", cerr)
+		}
+	}
+	if q.countTasksStmt != nil {
+		if cerr := q.countTasksStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countTasksStmt: %w", cerr)
+		}
+	}
 	if q.createObjectStmt != nil {
 		if cerr := q.createObjectStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createObjectStmt: %w", cerr)
@@ -67,6 +92,21 @@ func (q *Queries) Close() error {
 	if q.listTasksStmt != nil {
 		if cerr := q.listTasksStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listTasksStmt: %w", cerr)
+		}
+	}
+	if q.updateObjectLastSyncedAtStmt != nil {
+		if cerr := q.updateObjectLastSyncedAtStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateObjectLastSyncedAtStmt: %w", cerr)
+		}
+	}
+	if q.updateTaskProcessingStmt != nil {
+		if cerr := q.updateTaskProcessingStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTaskProcessingStmt: %w", cerr)
+		}
+	}
+	if q.updateTaskStatusStmt != nil {
+		if cerr := q.updateTaskStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTaskStatusStmt: %w", cerr)
 		}
 	}
 	return err
@@ -106,23 +146,33 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db               DBTX
-	tx               *sql.Tx
-	createObjectStmt *sql.Stmt
-	createTaskStmt   *sql.Stmt
-	getObjectStmt    *sql.Stmt
-	listObjectsStmt  *sql.Stmt
-	listTasksStmt    *sql.Stmt
+	db                           DBTX
+	tx                           *sql.Tx
+	countObjectsStmt             *sql.Stmt
+	countTasksStmt               *sql.Stmt
+	createObjectStmt             *sql.Stmt
+	createTaskStmt               *sql.Stmt
+	getObjectStmt                *sql.Stmt
+	listObjectsStmt              *sql.Stmt
+	listTasksStmt                *sql.Stmt
+	updateObjectLastSyncedAtStmt *sql.Stmt
+	updateTaskProcessingStmt     *sql.Stmt
+	updateTaskStatusStmt         *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:               tx,
-		tx:               tx,
-		createObjectStmt: q.createObjectStmt,
-		createTaskStmt:   q.createTaskStmt,
-		getObjectStmt:    q.getObjectStmt,
-		listObjectsStmt:  q.listObjectsStmt,
-		listTasksStmt:    q.listTasksStmt,
+		db:                           tx,
+		tx:                           tx,
+		countObjectsStmt:             q.countObjectsStmt,
+		countTasksStmt:               q.countTasksStmt,
+		createObjectStmt:             q.createObjectStmt,
+		createTaskStmt:               q.createTaskStmt,
+		getObjectStmt:                q.getObjectStmt,
+		listObjectsStmt:              q.listObjectsStmt,
+		listTasksStmt:                q.listTasksStmt,
+		updateObjectLastSyncedAtStmt: q.updateObjectLastSyncedAtStmt,
+		updateTaskProcessingStmt:     q.updateTaskProcessingStmt,
+		updateTaskStatusStmt:         q.updateTaskStatusStmt,
 	}
 }

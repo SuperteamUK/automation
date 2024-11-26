@@ -7,8 +7,6 @@ import (
 	"strconv"
 
 	"admin-server/internal/database"
-
-	"github.com/google/uuid"
 )
 
 type ObjectHandler struct {
@@ -24,16 +22,6 @@ func NewObjectHandler(q *database.Queries, l *log.Logger) *ObjectHandler {
 }
 
 func (h *ObjectHandler) List(w http.ResponseWriter, r *http.Request) {
-	var objectID *uuid.UUID
-	if idStr := r.URL.Query().Get("id"); idStr != "" {
-		id, err := uuid.Parse(idStr)
-		if err != nil {
-			http.Error(w, "invalid id", http.StatusBadRequest)
-			return
-		}
-		objectID = &id
-	}
-
 	limit := 10
 	if l := r.URL.Query().Get("limit"); l != "" {
 		parsed, err := strconv.Atoi(l)
@@ -51,7 +39,6 @@ func (h *ObjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	objects, err := h.queries.ListObjects(r.Context(), database.ListObjectsParams{
-		Column1:     *objectID,
 		Limit:  int32(limit),
 		Offset: int32(offset),
 	})
@@ -60,5 +47,20 @@ func (h *ObjectHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(objects)
+	// build pagination with CountTasks
+	count, err := h.queries.CountObjects(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	pagination := map[string]interface{}{
+		"total": count,
+		"limit": limit,
+		"offset": offset,
+	}
+	response := map[string]interface{}{
+		"objects": objects,
+		"pagination": pagination,
+	}
+	json.NewEncoder(w).Encode(response)
 }

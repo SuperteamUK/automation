@@ -10,10 +10,19 @@ WHERE id = $1;
 -- name: ListObjects :many
 SELECT *
 FROM objects
-WHERE CASE WHEN $1::uuid IS NOT NULL THEN id = $1 ELSE TRUE END
 ORDER BY last_synced_at DESC NULLS LAST
-LIMIT $2
-OFFSET $3;
+LIMIT $1
+OFFSET $2;
+
+-- name: CountObjects :one
+SELECT COUNT(*)
+FROM objects;
+
+-- name: UpdateObjectLastSyncedAt :one
+UPDATE objects
+SET last_synced_at = $2
+WHERE id = $1
+RETURNING *;
 
 -- name: CreateTask :one
 INSERT INTO tasks (
@@ -31,8 +40,15 @@ RETURNING *;
 SELECT *
 FROM tasks
 WHERE 
-    CASE WHEN $1::uuid IS NOT NULL THEN object_id = $1 ELSE TRUE END AND
-    CASE WHEN $2::text IS NOT NULL THEN status = $2 ELSE TRUE END
+    ($1::uuid IS NULL OR object_id = $1::uuid) AND
+    ($2::text = '' OR status = $2::text)
 ORDER BY created_at DESC
 LIMIT $3
 OFFSET $4;
+
+-- name: CountTasks :one
+SELECT COUNT(*)
+FROM tasks
+WHERE 
+    ($1::uuid IS NULL OR object_id = $1::uuid) AND
+    ($2::text = '' OR status = $2::text);

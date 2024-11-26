@@ -1,14 +1,21 @@
+// cmd/api/main.go
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
 	"admin-server/internal/api"
 	"admin-server/internal/api/config"
 	"admin-server/internal/database"
+	"admin-server/internal/worker"
 
 	_ "github.com/lib/pq"
 )
@@ -30,12 +37,63 @@ func main() {
 	// Create queries
 	queries := database.New(db)
 
-	// Initialize router
-	router := api.NewRouter(queries, logger, db)
+	// Create context that listens for interrupt signals
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Start server
-	logger.Printf("Server starting on :8181")
-	if err := http.ListenAndServe(":8181", router); err != nil {
-		logger.Fatal(err)
+	// Handle OS signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// WaitGroup to track all services
+	var wg sync.WaitGroup
+
+	// Start worker manager
+	mgr := worker.NewManager(db)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := mgr.Run(ctx); err != nil {
+			logger.Printf("Worker manager error: %v", err)
+		}
+	}()
+
+	// Initialize router
+	router := api.NewRouter(queries, logger, db, mgr)
+
+	// Create server
+	server := &http.Server{
+		Addr:    ":8181",
+		Handler: router,
 	}
+
+	// Start server in goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		logger.Printf("Server starting on :8181")
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			logger.Printf("Server error: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-sigChan
+	logger.Println("Received shutdown signal")
+
+	// Create shutdown context with timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	// Cancel main context to stop worker
+	cancel()
+
+	// Shutdown server gracefully
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Printf("Server shutdown error: %v", err)
+	}
+
+	// Wait for all services to complete
+	wg.Wait()
+	logger.Println("Graceful shutdown completed")
 }

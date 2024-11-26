@@ -12,11 +12,11 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { createTask } from '../api/task';
-import { SearchInput } from './SearchInput';
+import { SearchInput } from '../components/SearchInput';
 import { getObjectDetail, searchObjects } from '../api/muninn';
 import { AnimatePresence } from 'framer-motion';
 import { ListObjectsRow } from '../types';
-import { LoadingModal } from './LoadingModal';
+import { LoadingModal } from '../components/LoadingModal';
 import { composeNoScopeInput } from '../logic';
 
 export function CreateTask() {
@@ -29,9 +29,9 @@ export function CreateTask() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     try {
       const inputJson = JSON.parse(input);
+      setIsLoading(true);
       await createTask({
         object_id: objectId,
         input: inputJson,
@@ -53,6 +53,7 @@ export function CreateTask() {
         duration: 5000,
       });
     } finally {
+      console.log('close loading');
       setIsLoading(false);
     }
   };
@@ -69,14 +70,14 @@ export function CreateTask() {
 
   useEffect(() => {
     const getDetail = async () => {
+      if (objectId === '') return;
       setIsLoading(true);
       if (objectId === '') return;
       const obj = await getObjectDetail(objectId);
-      console.log(obj.typeValues);
       const params = obj.typeValues.map((tv) => {
         return tv.type_values;
       });
-      const ipt = composeNoScopeInput(params);
+      const ipt = composeNoScopeInput(params, obj.name);
       setInput(JSON.stringify(ipt, null, 2));
       setIsLoading(false);
     };

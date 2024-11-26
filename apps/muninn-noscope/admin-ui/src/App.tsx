@@ -11,9 +11,10 @@ import {
   TabPanels,
   Tabs,
 } from '@chakra-ui/react';
-import { TasksList } from './components/TaskList';
-import { CreateTask } from './components/CreateTask';
-import { ObjectsList } from './components/ObjectsList';
+import { TasksList } from './features/TaskList';
+import { CreateTask } from './features/CreateTask';
+import { ObjectsList } from './features/ObjectsList';
+import { WorkerManagement } from './features/WorkerManagement';
 
 const theme = extendTheme({
   styles: {
@@ -45,6 +46,7 @@ function App() {
               <Tab>Tasks</Tab>
               <Tab>Create Task</Tab>
               <Tab>Objects</Tab>
+              <Tab>Worker</Tab>
             </TabList>
             <TabPanels>
               <TabPanel>
@@ -55,6 +57,9 @@ function App() {
               </TabPanel>
               <TabPanel>
                 <ObjectsList />
+              </TabPanel>
+              <TabPanel>
+                <WorkerManagement />
               </TabPanel>
             </TabPanels>
           </Tabs>

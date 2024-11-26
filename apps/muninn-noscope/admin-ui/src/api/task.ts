@@ -2,13 +2,21 @@ import axios from 'axios';
 import { Task } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
+interface TaskResponse {
+  tasks: Task[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
 
 export const listTasks = async (params?: {
   object_id?: string;
   status?: Task['status'];
   limit?: number;
   offset?: number;
-}): Promise<Task[]> => {
+}): Promise<TaskResponse> => {
   const searchParams = new URLSearchParams();
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
