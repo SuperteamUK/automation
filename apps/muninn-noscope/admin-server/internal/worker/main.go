@@ -1,12 +1,15 @@
 package worker
 
 import (
+	"admin-server/internal/database"
+	task "admin-server/internal/worker/schedule_task"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -38,29 +41,45 @@ type Metrics struct {
 }
 
 type Manager struct {
-    db           *sql.DB
-    client       *http.Client
-    workerID     string
-    processingWg sync.WaitGroup
-    metrics      *Metrics
-    cancel       context.CancelFunc
-    ctx          context.Context
-    isRunning    bool
-    mu           sync.Mutex
+	db           *sql.DB
+	client       *http.Client
+	workerID     string
+	processingWg sync.WaitGroup
+	metrics      *Metrics
+	cancel       context.CancelFunc
+	ctx          context.Context
+	isRunning    bool
+	mu           sync.Mutex
+	scheduler		*Scheduler
 }
 
 func NewManager(db *sql.DB) *Manager {
-	return &Manager{
+	mrg := &Manager{
 		db: db,
 		client: &http.Client{
-				Timeout: 30 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 		workerID: uuid.New().String(),
 		metrics: &Metrics{
-				WorkerStatus: "stopped",
+			WorkerStatus: "stopped",
 		},
 		isRunning: false,
 	}
+
+	// Initialize scheduler
+	scheduler := NewScheduler(log.New(os.Stdout, "scheduler: ", log.LstdFlags))
+	scanTask := task.NewScanTask(
+		database.New(db), 
+		&http.Client{Timeout: 30 * time.Second}, 
+		log.New(os.Stdout, "scheduler: ", log.LstdFlags),
+	)
+	// Add scan task to run every 
+	// 5 minute in production
+	scheduler.AddTask("object-scan", scanTask, 5*time.Minute)
+
+	mrg.scheduler = scheduler
+
+	return mrg;
 }
 
 func (m *Manager) Start() error {
@@ -90,6 +109,7 @@ func (m *Manager) Start() error {
 
 	// Start processing in background
 	go m.processLoop()
+	go m.scheduler.Start(m.ctx)
 
 	log.Printf("Worker %s started", m.workerID)
 	return nil
@@ -141,4 +161,38 @@ func (m *Manager) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+func (m *Manager) validateConfig() error {
+	required := []struct {
+			name  string
+			value string
+	}{
+		{"NOSCOPE_ENRICH_URL", os.Getenv("NOSCOPE_ENRICH_URL")},
+		{"NOSCOPE_KEY", os.Getenv("NOSCOPE_KEY")},
+		{"MUNINN_UPSERT_OBJTYPE_URL", os.Getenv("MUNINN_UPSERT_OBJTYPE_URL")},
+		{"MUNINN_JWT", os.Getenv("MUNINN_JWT")},
+		{"MUNINN_NOSCOPE_OBJTYPE_ID", os.Getenv("MUNINN_NOSCOPE_OBJTYPE_ID")},
+		{"MUNINN_SCAN_OBJECTS_URL", os.Getenv("MUNINN_SCAN_OBJECTS_URL")},
+	}
+
+	var missing []string
+	for _, req := range required {
+		if req.value == "" {
+			missing = append(missing, req.name)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required environment variables: %v", missing)
+	}
+
+	return nil
+}
+
+func (m *Manager) logError(errMsg string) {
+	m.metrics.Lock()
+	m.metrics.LastErrorTime = time.Now()
+	m.metrics.LastError = errMsg
+	m.metrics.Unlock()
+	log.Printf("Worker %s error: %s", m.workerID, errMsg)
 }

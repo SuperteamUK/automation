@@ -8,7 +8,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -20,26 +19,6 @@ FROM objects
 
 func (q *Queries) CountObjects(ctx context.Context) (int64, error) {
 	row := q.queryRow(ctx, q.countObjectsStmt, countObjects)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countTasks = `-- name: CountTasks :one
-SELECT COUNT(*)
-FROM tasks
-WHERE 
-    ($1::uuid IS NULL OR object_id = $1::uuid) AND
-    ($2::text = '' OR status = $2::text)
-`
-
-type CountTasksParams struct {
-	Column1 *uuid.UUID `json:"column_1"`
-	Column2 string     `json:"column_2"`
-}
-
-func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, error) {
-	row := q.queryRow(ctx, q.countTasksStmt, countTasks, arg.Column1, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -58,39 +37,28 @@ func (q *Queries) CreateObject(ctx context.Context, id *uuid.UUID) (Object, erro
 	return i, err
 }
 
-const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (
-    object_id,
-    status,
-    input
-) VALUES (
-    $1,
-    'pending',
-    $2
-)
-RETURNING id, object_id, status, input, output, error, created_at, started_at, completed_at
+const createScanLog = `-- name: CreateScanLog :exec
+INSERT INTO object_scan_logs (latest) 
+VALUES ($1)
 `
 
-type CreateTaskParams struct {
-	ObjectID *uuid.UUID      `json:"object_id"`
-	Input    json.RawMessage `json:"input"`
+func (q *Queries) CreateScanLog(ctx context.Context, latest sql.NullTime) error {
+	_, err := q.exec(ctx, q.createScanLogStmt, createScanLog, latest)
+	return err
 }
 
-func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.queryRow(ctx, q.createTaskStmt, createTask, arg.ObjectID, arg.Input)
-	var i Task
-	err := row.Scan(
-		&i.ID,
-		&i.ObjectID,
-		&i.Status,
-		&i.Input,
-		&i.Output,
-		&i.Error,
-		&i.CreatedAt,
-		&i.StartedAt,
-		&i.CompletedAt,
-	)
-	return i, err
+const getLatestScanTime = `-- name: GetLatestScanTime :one
+SELECT latest 
+FROM object_scan_logs 
+ORDER BY created_at DESC 
+LIMIT 1
+`
+
+func (q *Queries) GetLatestScanTime(ctx context.Context) (sql.NullTime, error) {
+	row := q.queryRow(ctx, q.getLatestScanTimeStmt, getLatestScanTime)
+	var latest sql.NullTime
+	err := row.Scan(&latest)
+	return latest, err
 }
 
 const getObject = `-- name: GetObject :one
@@ -141,49 +109,22 @@ func (q *Queries) ListObjects(ctx context.Context, arg ListObjectsParams) ([]Obj
 	return items, nil
 }
 
-const listTasks = `-- name: ListTasks :many
-SELECT id, object_id, status, input, output, error, created_at, started_at, completed_at
-FROM tasks
-WHERE 
-    ($1::uuid IS NULL OR object_id = $1::uuid) AND
-    ($2::text = '' OR status = $2::text)
-ORDER BY created_at DESC
-LIMIT $3
-OFFSET $4
+const objectsSyncLast60days = `-- name: ObjectsSyncLast60days :many
+SELECT id, created_at, last_synced_at
+FROM objects
+WHERE last_synced_at > NOW() - INTERVAL '60 days'
 `
 
-type ListTasksParams struct {
-	Column1 *uuid.UUID `json:"column_1"`
-	Column2 string     `json:"column_2"`
-	Limit   int32      `json:"limit"`
-	Offset  int32      `json:"offset"`
-}
-
-func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
-	rows, err := q.query(ctx, q.listTasksStmt, listTasks,
-		arg.Column1,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
-	)
+func (q *Queries) ObjectsSyncLast60days(ctx context.Context) ([]Object, error) {
+	rows, err := q.query(ctx, q.objectsSyncLast60daysStmt, objectsSyncLast60days)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Task
+	var items []Object
 	for rows.Next() {
-		var i Task
-		if err := rows.Scan(
-			&i.ID,
-			&i.ObjectID,
-			&i.Status,
-			&i.Input,
-			&i.Output,
-			&i.Error,
-			&i.CreatedAt,
-			&i.StartedAt,
-			&i.CompletedAt,
-		); err != nil {
+		var i Object
+		if err := rows.Scan(&i.ID, &i.CreatedAt, &i.LastSyncedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

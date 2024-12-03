@@ -24,31 +24,17 @@ SET last_synced_at = $2
 WHERE id = $1
 RETURNING *;
 
--- name: CreateTask :one
-INSERT INTO tasks (
-    object_id,
-    status,
-    input
-) VALUES (
-    $1,
-    'pending',
-    $2
-)
-RETURNING *;
-
--- name: ListTasks :many
+-- name: ObjectsSyncLast60days :many
 SELECT *
-FROM tasks
-WHERE 
-    ($1::uuid IS NULL OR object_id = $1::uuid) AND
-    ($2::text = '' OR status = $2::text)
-ORDER BY created_at DESC
-LIMIT $3
-OFFSET $4;
+FROM objects
+WHERE last_synced_at > NOW() - INTERVAL '60 days';
 
--- name: CountTasks :one
-SELECT COUNT(*)
-FROM tasks
-WHERE 
-    ($1::uuid IS NULL OR object_id = $1::uuid) AND
-    ($2::text = '' OR status = $2::text);
+-- name: GetLatestScanTime :one
+SELECT latest 
+FROM object_scan_logs 
+ORDER BY created_at DESC 
+LIMIT 1;
+
+-- name: CreateScanLog :exec
+INSERT INTO object_scan_logs (latest) 
+VALUES ($1);

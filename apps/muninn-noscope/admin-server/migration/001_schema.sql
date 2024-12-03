@@ -25,3 +25,9 @@ CREATE TABLE tasks (
 CREATE INDEX idx_tasks_object_id ON tasks(object_id);
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_objects_last_synced ON objects(last_synced_at);
+
+CREATE TABLE object_scan_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    latest TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

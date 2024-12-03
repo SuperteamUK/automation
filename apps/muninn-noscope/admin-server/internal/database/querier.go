@@ -15,10 +15,14 @@ type Querier interface {
 	CountObjects(ctx context.Context) (int64, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (int64, error)
 	CreateObject(ctx context.Context, id *uuid.UUID) (Object, error)
-	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
+	CreateScanLog(ctx context.Context, latest sql.NullTime) error
+	CreateTask(ctx context.Context, arg CreateTaskParams) (CreateTaskRow, error)
+	GetLatestScanTime(ctx context.Context) (sql.NullTime, error)
 	GetObject(ctx context.Context, id *uuid.UUID) (Object, error)
+	GetStaleObjects(ctx context.Context, lastSyncedAt sql.NullTime) ([]*uuid.UUID, error)
 	ListObjects(ctx context.Context, arg ListObjectsParams) ([]Object, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
+	ObjectsSyncLast60days(ctx context.Context) ([]Object, error)
 	UpdateObjectLastSyncedAt(ctx context.Context, arg UpdateObjectLastSyncedAtParams) (Object, error)
 	UpdateTaskProcessing(ctx context.Context, startedAt sql.NullTime) (UpdateTaskProcessingRow, error)
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error

@@ -8,13 +8,13 @@ import (
 )
 
 type WorkerControlHandler struct {
-    manager *worker.Manager
+	manager *worker.Manager
 }
 
 func NewWorkerControlHandler(manager *worker.Manager) *WorkerControlHandler {
-    return &WorkerControlHandler{
-        manager: manager,
-    }
+	return &WorkerControlHandler{
+			manager: manager,
+	}
 }
 
 func (h *WorkerControlHandler) HandleStart(w http.ResponseWriter, r *http.Request) {

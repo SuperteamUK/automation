@@ -37,10 +37,10 @@ func (m *Manager) processLoop() {
 func (m *Manager) processPendingTasks() error {
     // Begin transaction
     tx, err := m.db.BeginTx(m.ctx, &sql.TxOptions{
-        Isolation: sql.LevelReadCommitted,
+			Isolation: sql.LevelReadCommitted,
     })
     if err != nil {
-        return fmt.Errorf("start transaction: %w", err)
+			return fmt.Errorf("start transaction: %w", err)
     }
     defer tx.Rollback()
 

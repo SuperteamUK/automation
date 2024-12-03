@@ -53,7 +53,6 @@ export function CreateTask() {
         duration: 5000,
       });
     } finally {
-      console.log('close loading');
       setIsLoading(false);
     }
   };
@@ -121,6 +120,7 @@ export function CreateTask() {
                     onClick={() => {
                       setObjectId(obj.id);
                       setFoundObjects([]);
+                      setSearchQuery('');
                     }}
                     direction='column'
                   >

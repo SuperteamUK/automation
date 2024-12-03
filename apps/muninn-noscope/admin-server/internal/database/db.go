@@ -33,17 +33,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createObjectStmt, err = db.PrepareContext(ctx, createObject); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateObject: %w", err)
 	}
+	if q.createScanLogStmt, err = db.PrepareContext(ctx, createScanLog); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateScanLog: %w", err)
+	}
 	if q.createTaskStmt, err = db.PrepareContext(ctx, createTask); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateTask: %w", err)
 	}
+	if q.getLatestScanTimeStmt, err = db.PrepareContext(ctx, getLatestScanTime); err != nil {
+		return nil, fmt.Errorf("error preparing query GetLatestScanTime: %w", err)
+	}
 	if q.getObjectStmt, err = db.PrepareContext(ctx, getObject); err != nil {
 		return nil, fmt.Errorf("error preparing query GetObject: %w", err)
+	}
+	if q.getStaleObjectsStmt, err = db.PrepareContext(ctx, getStaleObjects); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStaleObjects: %w", err)
 	}
 	if q.listObjectsStmt, err = db.PrepareContext(ctx, listObjects); err != nil {
 		return nil, fmt.Errorf("error preparing query ListObjects: %w", err)
 	}
 	if q.listTasksStmt, err = db.PrepareContext(ctx, listTasks); err != nil {
 		return nil, fmt.Errorf("error preparing query ListTasks: %w", err)
+	}
+	if q.objectsSyncLast60daysStmt, err = db.PrepareContext(ctx, objectsSyncLast60days); err != nil {
+		return nil, fmt.Errorf("error preparing query ObjectsSyncLast60days: %w", err)
 	}
 	if q.updateObjectLastSyncedAtStmt, err = db.PrepareContext(ctx, updateObjectLastSyncedAt); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateObjectLastSyncedAt: %w", err)
@@ -74,14 +86,29 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createObjectStmt: %w", cerr)
 		}
 	}
+	if q.createScanLogStmt != nil {
+		if cerr := q.createScanLogStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createScanLogStmt: %w", cerr)
+		}
+	}
 	if q.createTaskStmt != nil {
 		if cerr := q.createTaskStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createTaskStmt: %w", cerr)
 		}
 	}
+	if q.getLatestScanTimeStmt != nil {
+		if cerr := q.getLatestScanTimeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getLatestScanTimeStmt: %w", cerr)
+		}
+	}
 	if q.getObjectStmt != nil {
 		if cerr := q.getObjectStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getObjectStmt: %w", cerr)
+		}
+	}
+	if q.getStaleObjectsStmt != nil {
+		if cerr := q.getStaleObjectsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStaleObjectsStmt: %w", cerr)
 		}
 	}
 	if q.listObjectsStmt != nil {
@@ -92,6 +119,11 @@ func (q *Queries) Close() error {
 	if q.listTasksStmt != nil {
 		if cerr := q.listTasksStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listTasksStmt: %w", cerr)
+		}
+	}
+	if q.objectsSyncLast60daysStmt != nil {
+		if cerr := q.objectsSyncLast60daysStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing objectsSyncLast60daysStmt: %w", cerr)
 		}
 	}
 	if q.updateObjectLastSyncedAtStmt != nil {
@@ -151,10 +183,14 @@ type Queries struct {
 	countObjectsStmt             *sql.Stmt
 	countTasksStmt               *sql.Stmt
 	createObjectStmt             *sql.Stmt
+	createScanLogStmt            *sql.Stmt
 	createTaskStmt               *sql.Stmt
+	getLatestScanTimeStmt        *sql.Stmt
 	getObjectStmt                *sql.Stmt
+	getStaleObjectsStmt          *sql.Stmt
 	listObjectsStmt              *sql.Stmt
 	listTasksStmt                *sql.Stmt
+	objectsSyncLast60daysStmt    *sql.Stmt
 	updateObjectLastSyncedAtStmt *sql.Stmt
 	updateTaskProcessingStmt     *sql.Stmt
 	updateTaskStatusStmt         *sql.Stmt
@@ -167,10 +203,14 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		countObjectsStmt:             q.countObjectsStmt,
 		countTasksStmt:               q.countTasksStmt,
 		createObjectStmt:             q.createObjectStmt,
+		createScanLogStmt:            q.createScanLogStmt,
 		createTaskStmt:               q.createTaskStmt,
+		getLatestScanTimeStmt:        q.getLatestScanTimeStmt,
 		getObjectStmt:                q.getObjectStmt,
+		getStaleObjectsStmt:          q.getStaleObjectsStmt,
 		listObjectsStmt:              q.listObjectsStmt,
 		listTasksStmt:                q.listTasksStmt,
+		objectsSyncLast60daysStmt:    q.objectsSyncLast60daysStmt,
 		updateObjectLastSyncedAtStmt: q.updateObjectLastSyncedAtStmt,
 		updateTaskProcessingStmt:     q.updateTaskProcessingStmt,
 		updateTaskStatusStmt:         q.updateTaskStatusStmt,

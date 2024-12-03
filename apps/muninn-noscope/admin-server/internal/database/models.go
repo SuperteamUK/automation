@@ -18,6 +18,12 @@ type Object struct {
 	LastSyncedAt sql.NullTime `json:"last_synced_at"`
 }
 
+type ObjectScanLog struct {
+	ID        *uuid.UUID   `json:"id"`
+	Latest    sql.NullTime `json:"latest"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
 type Task struct {
 	ID          *uuid.UUID            `json:"id"`
 	ObjectID    *uuid.UUID            `json:"object_id"`

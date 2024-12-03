@@ -23,6 +23,9 @@ import {
 } from '@chakra-ui/react';
 import { getMetrics, startWorker, stopWorker } from '../api/worker';
 import { WorkerMetrics } from '../types';
+import dayjs from 'dayjs';
+
+dayjs.extend(require('dayjs/plugin/relativeTime'));
 
 const REFRESH_INTERVAL = 5000; // 5 seconds
 
@@ -104,11 +107,6 @@ export function WorkerManagement() {
       stopping: 'orange',
     };
     return colors[status.toLowerCase()] || 'gray';
-  };
-
-  const formatDateTime = (dateStr: string) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString();
   };
 
   if (loading) {
@@ -207,11 +205,19 @@ export function WorkerManagement() {
             <Grid templateColumns='1fr 1fr' gap={4}>
               <Box>
                 <Text fontWeight='bold'>Last Start Time</Text>
-                <Text>{formatDateTime(metrics.last_start_time)}</Text>
+                <Text>
+                  {metrics.last_start_time !== '0001-01-01T00:00:00Z'
+                    ? dayjs(metrics.last_start_time).fromNow()
+                    : '-'}
+                </Text>
               </Box>
               <Box>
                 <Text fontWeight='bold'>Last Error Time</Text>
-                <Text>{formatDateTime(metrics.last_error_time)}</Text>
+                <Text>
+                  {metrics.last_error_time !== '0001-01-01T00:00:00Z'
+                    ? dayjs(metrics.last_error_time).fromNow()
+                    : '-'}
+                </Text>
               </Box>
             </Grid>
             {metrics.last_error && (
