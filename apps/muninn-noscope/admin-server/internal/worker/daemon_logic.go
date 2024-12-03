@@ -110,6 +110,10 @@ type MuninnTagRequest struct {
 	Tags     []string  `json:"tags"`
 }
 
+func Split(r rune) bool {
+	return r == ',' || r == '#' || r == '@' || r == ';' || r == '/'
+}
+
 // Add the new function to call Muninn tag API
 func (m *Manager) callMuninnTagObject(ctx context.Context, objID uuid.UUID, noscopeResp json.RawMessage) error {
 	// Parse the Noscope response to get labels
@@ -123,7 +127,7 @@ func (m *Manager) callMuninnTagObject(ctx context.Context, objID uuid.UUID, nosc
 		return nil
 	}
 	// split noscope.Labels into tags
-	tags := strings.Split(noscope.Labels, ",")
+	tags := strings.FieldsFunc(noscope.Labels, Split)
 
 	// Prepare tag request
 	tagReq := MuninnTagRequest{
