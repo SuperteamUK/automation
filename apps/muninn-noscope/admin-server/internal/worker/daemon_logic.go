@@ -111,7 +111,7 @@ type MuninnTagRequest struct {
 }
 
 func Split(r rune) bool {
-	return r == ',' || r == '#' || r == '@' || r == ';' || r == '/'
+	return r == ',' || r == '#' || r == '@' || r == ';'
 }
 
 // Add the new function to call Muninn tag API
