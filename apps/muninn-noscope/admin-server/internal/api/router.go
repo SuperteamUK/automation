@@ -24,7 +24,7 @@ func NewRouter(queries *database.Queries, logger *log.Logger, db *sql.DB, worker
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "x-control-key"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "x-control-key", "x-user-secret"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:          300,
@@ -34,11 +34,13 @@ func NewRouter(queries *database.Queries, logger *log.Logger, db *sql.DB, worker
 	taskHandler := handlers.NewTaskHandler(queries, db, logger)
 	objectHandler := handlers.NewObjectHandler(queries, logger)
 	workerCtrl := handlers.NewWorkerControlHandler(workerMgr)
+	authCtrl := handlers.NewAuthHandler(queries, logger)
 
 	// Routes
 	r.Post("/tasks", taskHandler.Create)
 	r.Get("/tasks", taskHandler.List)
 	r.Get("/objects", objectHandler.List)
+	r.Post("/login", authCtrl.Login)
 	
 	r.Route("/api/worker", func(r chi.Router) {
 		r.Use(authenticateWorkerControl)

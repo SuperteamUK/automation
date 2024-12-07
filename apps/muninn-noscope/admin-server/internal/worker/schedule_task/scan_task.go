@@ -45,6 +45,7 @@ func NewScanTask(queries *database.Queries, client *http.Client, logger *log.Log
 func (t *ScanTask) scanNewObjects(ctx context.Context) error {
 	// Get latest scan time
 	lastScan, err := t.queries.GetLatestScanTime(ctx)
+	// fmt.Println("lastScan: ",lastScan)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("get latest scan time: %w", err)
 	}
@@ -57,18 +58,19 @@ func (t *ScanTask) scanNewObjects(ctx context.Context) error {
 			Valid: true,
 		}
 	}
-	t.logger.Println("scanNewObjects, lastScan: ",lastScan.Time)
+	// t.logger.Println("scanNewObjects, lastScan: ",lastScan.Time)
 	// Call MUNINN API
 	req := struct {
 		CreatedAfter time.Time `json:"created_after"`
 	}{
 		CreatedAfter: lastScan.Time,
 	}
+	// t.logger.Println("scanNewObjects, req: ",req)
 	resp, err := t.callMuninnScanAPI(ctx, req)
 	if err != nil {
 		return err
 	}
-
+	// t.logger.Println("scanNewObjects, resp.Objects.length: ",len(resp.Objects))
 	// Create tasks for each object
 	for _, obj := range resp.Objects {
 		// check if the object existed
@@ -88,7 +90,7 @@ func (t *ScanTask) scanNewObjects(ctx context.Context) error {
 	if(len(resp.Objects) == 0){
 		return nil
 	}
-	t.logger.Println("latest scan time: ",resp.Latest)
+	// t.logger.Println("latest scan time: ",resp.Latest)
 	// Update scan log
 	if err := t.queries.CreateScanLog(ctx, sql.NullTime{
 		Time: resp.Latest,
@@ -150,8 +152,8 @@ func (t *ScanTask) callMuninnScanAPI(ctx context.Context, body interface{}) (*Sc
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	t.logger.Println("CallMuninnScanAPI: ",os.Getenv("MUNINN_SCAN_OBJECTS_URL"))
-	t.logger.Println(body);
+	// t.logger.Println("CallMuninnScanAPI: ",os.Getenv("MUNINN_SCAN_OBJECTS_URL"))
+	// t.logger.Println(body);
 	req, err := http.NewRequestWithContext(ctx, "POST", os.Getenv("MUNINN_SCAN_OBJECTS_URL"), bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
