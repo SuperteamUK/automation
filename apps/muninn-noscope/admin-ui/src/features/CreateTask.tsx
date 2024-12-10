@@ -18,6 +18,7 @@ import { AnimatePresence } from 'framer-motion';
 import { ListObjectsRow } from '../types';
 import { LoadingModal } from '../components/LoadingModal';
 import { composeNoScopeInput } from '../logic';
+import { useSecret } from '../context/SecretContext';
 
 export function CreateTask() {
   const [objectId, setObjectId] = useState('');
@@ -26,6 +27,7 @@ export function CreateTask() {
   const [searchQuery, setSearchQuery] = useState('');
   const [foundObjects, setFoundObjects] = useState<ListObjectsRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { jwt } = useSecret();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,19 +62,19 @@ export function CreateTask() {
   useEffect(() => {
     const search = async () => {
       setIsLoading(true);
-      const data = await searchObjects(1, 10, searchQuery);
+      const data = await searchObjects(jwt, 1, 10, searchQuery);
       setFoundObjects(data.objects);
       setIsLoading(false);
     };
     search();
-  }, [searchQuery]);
+  }, [searchQuery, jwt]);
 
   useEffect(() => {
     const getDetail = async () => {
       if (objectId === '') return;
       setIsLoading(true);
       if (objectId === '') return;
-      const obj = await getObjectDetail(objectId);
+      const obj = await getObjectDetail(jwt, objectId);
       const params = obj.typeValues.map((tv) => {
         return tv.type_values;
       });
@@ -81,7 +83,7 @@ export function CreateTask() {
       setIsLoading(false);
     };
     getDetail();
-  }, [objectId]);
+  }, [jwt, objectId]);
 
   return (
     <Box bg='white' p={6} rounded='lg' shadow='sm'>

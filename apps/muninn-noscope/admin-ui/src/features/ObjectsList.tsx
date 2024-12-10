@@ -28,7 +28,6 @@ export function ObjectsList() {
     } catch (error) {}
   };
 
-  console.log('objects: ', objects);
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps

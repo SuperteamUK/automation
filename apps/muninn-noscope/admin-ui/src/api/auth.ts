@@ -11,7 +11,7 @@ export const login = async (secret: string) => {
     url: `${API_BASE_URL}/login`,
   });
   if (response.status === 200) {
-    return true;
+    return response.data;
   } else {
     throw new Error('Login failed');
   }

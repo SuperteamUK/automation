@@ -1,12 +1,11 @@
 import { WorkerMetrics } from '../types';
 
-const CONTROL_KEY = process.env.REACT_APP_CONTROL_SECRET_KEY;
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
-export const getMetrics = async (): Promise<WorkerMetrics> => {
+export const getMetrics = async (secret: string): Promise<WorkerMetrics> => {
   const response = await fetch(API_BASE_URL + '/api/worker/metrics', {
     headers: {
-      'x-control-key': CONTROL_KEY || '',
+      'x-control-key': secret || '',
     },
   });
   if (!response.ok) {
@@ -15,11 +14,11 @@ export const getMetrics = async (): Promise<WorkerMetrics> => {
   return response.json();
 };
 
-export const startWorker = async (): Promise<void> => {
+export const startWorker = async (secret: string): Promise<void> => {
   const response = await fetch(API_BASE_URL + '/api/worker/start', {
     method: 'POST',
     headers: {
-      'x-control-key': CONTROL_KEY || '',
+      'x-control-key': secret || '',
     },
   });
   if (!response.ok) {
@@ -27,11 +26,11 @@ export const startWorker = async (): Promise<void> => {
   }
 };
 
-export const stopWorker = async (): Promise<void> => {
+export const stopWorker = async (secret: string): Promise<void> => {
   const response = await fetch(API_BASE_URL + '/api/worker/stop', {
     method: 'POST',
     headers: {
-      'x-control-key': CONTROL_KEY || '',
+      'x-control-key': secret || '',
     },
   });
   if (!response.ok) {

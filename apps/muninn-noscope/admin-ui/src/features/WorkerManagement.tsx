@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import {
 import { getMetrics, startWorker, stopWorker } from '../api/worker';
 import { WorkerMetrics } from '../types';
 import dayjs from 'dayjs';
+import { useSecret } from '../context/SecretContext';
 
 dayjs.extend(require('dayjs/plugin/relativeTime'));
 
@@ -36,10 +37,10 @@ export function WorkerManagement() {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const toast = useToast();
-
-  const fetchMetrics = async () => {
+  const { secretKey } = useSecret();
+  const fetchMetrics = useCallback(async () => {
     try {
-      const data = await getMetrics();
+      const data = await getMetrics(secretKey);
       setMetrics(data);
       setError(null);
     } catch (err) {
@@ -47,18 +48,18 @@ export function WorkerManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [secretKey]);
 
   useEffect(() => {
     fetchMetrics();
     const interval = setInterval(fetchMetrics, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchMetrics]);
 
   const handleStartWorker = async () => {
     setIsStarting(true);
     try {
-      await startWorker();
+      await startWorker(secretKey);
       toast({
         title: 'Worker started successfully',
         status: 'success',
@@ -80,7 +81,7 @@ export function WorkerManagement() {
   const handleStopWorker = async () => {
     setIsStopping(true);
     try {
-      await stopWorker();
+      await stopWorker(secretKey);
       toast({
         title: 'Worker stopped successfully',
         status: 'success',

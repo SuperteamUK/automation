@@ -3,7 +3,6 @@ import { ListObjectsRow, ObjectDetail } from '../types';
 import { trim } from 'lodash';
 
 const MUNINN_API = process.env.REACT_APP_MUNINN_API_URL;
-const BOT_JWT = process.env.REACT_APP_MUNINN_JWT;
 
 // fetch
 export const crawlObject = async (object_id: string): Promise<any> => {};
@@ -16,6 +15,7 @@ export interface ListObjectResponse {
 }
 
 export const searchObjects = async (
+  jwt: string,
   page: number,
   pageSize: number,
   search?: string
@@ -34,7 +34,7 @@ export const searchObjects = async (
     `${MUNINN_API}/objects?search=${searchQuery}&page=${page}&pageSize=${pageSize}`,
     {
       headers: {
-        Authorization: `Bearer ${BOT_JWT}`,
+        Authorization: `Bearer ${jwt}`,
         'Content-Type': 'application/json',
       },
     }
@@ -43,11 +43,12 @@ export const searchObjects = async (
 };
 
 export const getObjectDetail = async (
+  jwt: string,
   object_id: string
 ): Promise<ObjectDetail> => {
   const response = await axios.get(`${MUNINN_API}/objects/${object_id}`, {
     headers: {
-      Authorization: `Bearer ${BOT_JWT}`,
+      Authorization: `Bearer ${jwt}`,
       'Content-Type': 'application/json',
     },
   });
