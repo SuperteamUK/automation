@@ -57,7 +57,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Start worker manager
-	mgr := worker.NewManager(db)
+	mgr := worker.NewManager(db,fileLogger.Logger)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

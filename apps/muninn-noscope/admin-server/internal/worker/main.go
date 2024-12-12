@@ -53,7 +53,7 @@ type Manager struct {
 	scheduler		*Scheduler
 }
 
-func NewManager(db *sql.DB) *Manager {
+func NewManager(db *sql.DB, logger *log.Logger) *Manager {
 	mrg := &Manager{
 		db: db,
 		client: &http.Client{
@@ -67,7 +67,7 @@ func NewManager(db *sql.DB) *Manager {
 	}
 
 	// Initialize scheduler
-	scheduler := NewScheduler(log.New(os.Stdout, "scheduler: ", log.LstdFlags))
+	scheduler := NewScheduler(logger)
 	scanTask := task.NewScanTask(
 		database.New(db), 
 		&http.Client{Timeout: 30 * time.Second}, 
