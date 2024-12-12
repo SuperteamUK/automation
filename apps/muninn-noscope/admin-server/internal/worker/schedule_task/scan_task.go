@@ -53,7 +53,7 @@ func (t *ScanTask) scanNewObjects(ctx context.Context) error {
 	// If no last scan, use fallback time
 	if !lastScan.Valid {
 		// fallbackTime := time.Now().Add(-time.Hour) // 1 hour ago if the system is running for the first time
-		fallbackTime, err := time.Parse("YYYY-MM-DD HH:MM:SS.sss ±HHMM","2024-12-04 20:22:17.542 +0000")
+		fallbackTime, err := time.Parse("2006-01-02 15:04:05.000 -0700","2024-12-04 20:22:17.542 +0000")
 		if err != nil {
 			return fmt.Errorf("parse fallback time: %w", err)
 		}
