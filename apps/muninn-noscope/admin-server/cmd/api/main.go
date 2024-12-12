@@ -15,6 +15,7 @@ import (
 	"admin-server/internal/api"
 	"admin-server/internal/api/config"
 	"admin-server/internal/database"
+	"admin-server/internal/util"
 	"admin-server/internal/worker"
 
 	_ "github.com/lib/pq"
@@ -25,7 +26,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	// logger := log.New(os.Stdout, "", log.LstdFlags)
+	fileLogger, err :=  util.NewFileLogger("./logs")
+	if err != nil {
+		log.Fatalf("Failed to create file logger: %v", err)
+	}
+	logger := fileLogger.Logger
+	defer fileLogger.Close()
+
 
 	// Initialize database connection
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
@@ -71,7 +79,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger.Printf("Server starting on :8181")
+		logger.Printf("Server starting on :8181, start writing to file")
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Printf("Server error: %v", err)
 		}
