@@ -48,6 +48,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStaleObjectsStmt, err = db.PrepareContext(ctx, getStaleObjects); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStaleObjects: %w", err)
 	}
+	if q.healthCheckStmt, err = db.PrepareContext(ctx, healthCheck); err != nil {
+		return nil, fmt.Errorf("error preparing query HealthCheck: %w", err)
+	}
 	if q.listObjectsStmt, err = db.PrepareContext(ctx, listObjects); err != nil {
 		return nil, fmt.Errorf("error preparing query ListObjects: %w", err)
 	}
@@ -109,6 +112,11 @@ func (q *Queries) Close() error {
 	if q.getStaleObjectsStmt != nil {
 		if cerr := q.getStaleObjectsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getStaleObjectsStmt: %w", cerr)
+		}
+	}
+	if q.healthCheckStmt != nil {
+		if cerr := q.healthCheckStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing healthCheckStmt: %w", cerr)
 		}
 	}
 	if q.listObjectsStmt != nil {
@@ -188,6 +196,7 @@ type Queries struct {
 	getLatestScanTimeStmt        *sql.Stmt
 	getObjectStmt                *sql.Stmt
 	getStaleObjectsStmt          *sql.Stmt
+	healthCheckStmt              *sql.Stmt
 	listObjectsStmt              *sql.Stmt
 	listTasksStmt                *sql.Stmt
 	objectsSyncLast60daysStmt    *sql.Stmt
@@ -208,6 +217,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getLatestScanTimeStmt:        q.getLatestScanTimeStmt,
 		getObjectStmt:                q.getObjectStmt,
 		getStaleObjectsStmt:          q.getStaleObjectsStmt,
+		healthCheckStmt:              q.healthCheckStmt,
 		listObjectsStmt:              q.listObjectsStmt,
 		listTasksStmt:                q.listTasksStmt,
 		objectsSyncLast60daysStmt:    q.objectsSyncLast60daysStmt,

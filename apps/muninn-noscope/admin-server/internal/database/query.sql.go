@@ -73,6 +73,17 @@ func (q *Queries) GetObject(ctx context.Context, id *uuid.UUID) (Object, error) 
 	return i, err
 }
 
+const healthCheck = `-- name: HealthCheck :one
+Select 1
+`
+
+func (q *Queries) HealthCheck(ctx context.Context) (int32, error) {
+	row := q.queryRow(ctx, q.healthCheckStmt, healthCheck)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listObjects = `-- name: ListObjects :many
 SELECT id, created_at, last_synced_at
 FROM objects

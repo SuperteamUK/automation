@@ -41,6 +41,8 @@ func NewRouter(queries *database.Queries, logger *log.Logger, db *sql.DB, worker
 	r.Get("/tasks", taskHandler.List)
 	r.Get("/objects", objectHandler.List)
 	r.Post("/login", authCtrl.Login)
+
+	r.Get("/stats", handlers.HealthCheck(queries))
 	
 	r.Route("/api/worker", func(r chi.Router) {
 		r.Use(authenticateWorkerControl)

@@ -20,6 +20,7 @@ type Querier interface {
 	GetLatestScanTime(ctx context.Context) (sql.NullTime, error)
 	GetObject(ctx context.Context, id *uuid.UUID) (Object, error)
 	GetStaleObjects(ctx context.Context, lastSyncedAt sql.NullTime) ([]*uuid.UUID, error)
+	HealthCheck(ctx context.Context) (int32, error)
 	ListObjects(ctx context.Context, arg ListObjectsParams) ([]Object, error)
 	ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error)
 	ObjectsSyncLast60days(ctx context.Context) ([]Object, error)

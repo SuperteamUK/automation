@@ -38,3 +38,6 @@ LIMIT 1;
 -- name: CreateScanLog :exec
 INSERT INTO object_scan_logs (latest) 
 VALUES ($1);
+
+-- name: HealthCheck :one
+Select 1;
