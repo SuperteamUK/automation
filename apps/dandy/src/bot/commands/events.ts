@@ -44,7 +44,7 @@ export const events = async (ctx: any) => {
     events.sort((a: any, b: any) => {
       return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
     });
-    for (const event of events.slice(0, 5)) {
+    for (const event of events.slice(0, 3)) {
       await ctx.replyWithMarkdown(formatEventMessage(event), {
         disable_web_page_preview: true,
         reply_markup: {
