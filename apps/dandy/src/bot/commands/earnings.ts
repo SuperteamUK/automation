@@ -18,7 +18,7 @@ export const earnings = async (ctx: any) => {
           [
             {
               text: '🔍 View Opportunities',
-              url: 'https://earn.superteam.fun/search/?q=SuperteamUK&status=OPEN',
+              url: 'https://earn.superteam.fun/regions/uk/',
             },
           ],
         ],
