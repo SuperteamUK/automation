@@ -5,7 +5,10 @@ import { MessageObject } from '../types';
 import { queryAIWelcome } from '../services/aiwelcomeApi';
 import { checkRateLimit } from '../services/rateLimiter';
 import { isNoMessage } from '../services/isNoMessage';
-
+import { commands } from './constant';
+import { execCommand } from './model';
+import { handleMessageForTicket } from './commands/help';
+import { setupFAQHandlers } from './commands/faq';
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
 async function handleMessage(ctx: any, question: string, isPrivate: boolean) {
@@ -27,13 +30,13 @@ async function handleMessage(ctx: any, question: string, isPrivate: boolean) {
     const answer = await queryAIWelcome(question);
     if (isNoMessage(answer)) {
       // post question to a dedicated channel
-      bot.telegram.sendMessage(
+      await bot.telegram.sendMessage(
         TELEGRAM_SUPPORT_CHANNEL, // replace with your channel ID
-        `Following question has no answer:\n ${question}`
+        `Following question from @${ctx.from.username} has no answer:\n ${question}`
       );
     }
     if (isPrivate) {
-      ctx.reply(answer, {
+      await ctx.reply(answer, {
         reply_to_message_id: ctx.message?.message_id,
         parse_mode: 'Markdown',
       });
@@ -44,15 +47,22 @@ async function handleMessage(ctx: any, question: string, isPrivate: boolean) {
       });
     }
   } catch (error) {
-    console.error('Error handling message:', error);
-    ctx.reply(
-      'Sorry, something went wrong. Please try again later or contact support.'
-    );
+    console.error('Error forwarding unknown question to Dandy operator');
+    // ctx.reply(
+    //   'Sorry, something went wrong. Please try again later or contact support.'
+    // );
   }
 }
 
+setupFAQHandlers(bot);
+
 bot.on('text', async (ctx) => {
-  console.log('ctx.message.chat.id:', ctx.message.chat.id);
+  const isTicket = await handleMessageForTicket(ctx, bot);
+  if (isTicket) return;
+  if (commands.includes(ctx.message.text)) {
+    execCommand(ctx, ctx.message.text);
+    return;
+  }
   if ('text' in ctx.message) {
     const chatId = ctx.message.chat.id.toString();
     const messageObj: MessageObject = {

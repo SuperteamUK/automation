@@ -5,6 +5,9 @@ dotenv.config();
 
 export const TELEGRAM_BOT_TOKEN = process.env.BOT_TOKEN!;
 export const TELEGRAM_SUPPORT_CHANNEL = process.env.SUPPORT_CHAT_ID!;
+export const TICKET_CHAT_ID = process.env.TICKET_CHAT_ID!;
+
+export const LUMA_SECRET = process.env.LUMA_SECRET!;
 
 // AIWelcome API configuration
 export const AIWELCOME_API_KEY = process.env.AIWELCOME_API_KEY!;
