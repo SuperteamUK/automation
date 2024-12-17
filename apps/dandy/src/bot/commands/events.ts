@@ -41,7 +41,10 @@ export const events = async (ctx: any) => {
         url: e.event.url,
       };
     });
-    for (const event of events) {
+    events.sort((a: any, b: any) => {
+      return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+    });
+    for (const event of events.slice(0, 5)) {
       await ctx.replyWithMarkdown(formatEventMessage(event), {
         disable_web_page_preview: true,
         reply_markup: {
@@ -59,7 +62,7 @@ export const events = async (ctx: any) => {
 
     // Add footer message
     await ctx.reply(
-      'These are all upcoming events. Check back later for more!',
+      'For the full list of event, follow this link https://lu.ma/superteam?tag=uk !',
       Markup.keyboard([
         ['/events', '/jobs', '/earnings'],
         ['/help', '/faq', '/brand'],
